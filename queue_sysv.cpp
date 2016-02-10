@@ -6,12 +6,15 @@
 #include <sys/stat.h>
 
 #include <string.h>
-
 #include <errno.h>
-
 #include <iostream>
 
 using namespace std;
+
+struct message{
+    long mtype;
+    char mtext[80];
+};
 
 
 int main(int argc, char **argv){
@@ -26,7 +29,7 @@ int main(int argc, char **argv){
         return 0;
     }
 
-    int msg_flg = IPC_CREAT | S_IWUSR | S_IRUSR | S_IWGRP | S_IRGRP | S_IROTH;
+    int msg_flg = IPC_CREAT | 0777;
     int msg_id = msgget(key, msg_flg);
     if (msg_id == -1){
         std::cout << "[error | msg_id] " << strerror( errno ) << std::endl;
@@ -38,19 +41,20 @@ int main(int argc, char **argv){
 
     // write message to file
     // ======================================
-    char *buff;
-    int st_msgrcv = msgrcv(msg_id, buff, 80, 0, 0);
-    if (st_msgrcv){
+
+    struct message m_msg;
+    int st_msgrcv = msgrcv(msg_id, (struct msgbuf *) &m_msg.mtext, 80, 0, 0);
+    if (st_msgrcv == -1){
         std::cout << "[error | st_msgrcv] " << strerror( errno ) << std::endl;
         return 0;
     }
 
-    printf("Text = %s", buff);
+    printf("Text message = %s\n", m_msg.mtext);
     FILE * pFile;
     pFile = fopen ("/home/box/message.txt","w");
     if ( pFile != NULL )
     {
-        fputs (buff,pFile);
+        fwrite (m_msg.mtext, sizeof(char), sizeof(st_msgrcv), pFile);
         fclose (pFile);
     }
     else{
